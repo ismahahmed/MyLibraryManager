@@ -1,11 +1,8 @@
-# MyLibraryManager
+# My Library Manager
 
-My Library Manager is a Python project that allows users to manage and explore their virtual book library. The application stores data in a CSV file (books.csv) and provides a command-line interface (CLI) to add, view, edit, delete, and sort books based on various attributes such as title, author, year of publication, ratings, genre, and read status
+My Library Manager is a Python project that allows users to manage and explore their virtual book library. The application stores data in a CSV file (books.csv) and provides a command-line interface (CLI) to add, view, edit, delete, and sort books based on various attributes such as title, author, year of publication, ratings, genre, and read status.
 
-This project acts as a personal book database that helps users organize their books in a digital format, making it easier to track what they’ve read and what they still need to read. 
-
-*The purpose of this project is to help me practice applying algorithms*
-
+This project acts as a personal book database that helps users organize their books in a digital format, making it easier to track what they’ve read and what they still need to read.
 
 ## Features
 
@@ -16,6 +13,8 @@ This project acts as a personal book database that helps users organize their bo
 - Sort books by various attributes
 - Sort books within bookshelves
 - Delete the entire library
+- Estimate total reading time for unread books
+- Calculate the maximum high-value books you can read within a certain time
 
 ```{bash}
 LibraryManager/
@@ -25,52 +24,10 @@ LibraryManager/
 ├── helpers.py              # Contains helper functions like read_csv_as_dict and divide_books
 ├── sorting.py              # Contains sorting algorithms for books
 ├── validation.py           # Contains validation functions for user input
+├── mst_clustering.py       # Contains MSTClustering class for clustering books by similarity
 ├── MyLibraryManager.py      # Main script to run the program
 └── README.md               # Project documentation
 
-
-MyLibraryManager/
-    ├── MyLibraryManager.py
-    │   ├── __init__(self, csv_file='data/books.csv')
-    │   ├── view_books(self)
-    │   ├── write_csv_header(self, writer)
-    │   ├── write_book_to_csv(self, writer, book)
-    │   ├── save_book_to_csv(self, book)
-    │   ├── add_book(self)
-    │   ├── delete_library(self)
-    │   ├── delete_book_from_csv(self, book)
-    │   ├── find_book_by_title(self, title)
-    │   ├── edit_book_details(self, book)
-    │   ├── update_csv_file(self)
-    │   ├── edit_book(self)
-    │   ├── make_sorting_choice(self)
-    │   ├── menu(self)
-    ├── Book.py
-    │   ├── __init__(self, title, author_first, author_last, isbn, isbn13, my_rating, avg_rating, publisher, binding, num_pages, year_published, date_read, genre, age_group, read)
-    │   ├── display_details(self)
-    │   ├── get_book_dict(self)
-    │   ├── __str__(self)
-    ├── Helpers.py
-    │   ├── read_csv_as_dict(csv_file)
-    │   ├── divide_books(book_list)
-    │   ├── rewrite_csv(csv_file, books)
-    ├── Sorting.py
-    │   ├── merge_sort(book_list, sorting_categories)
-    │   ├── merge(left, right, sorting_categories)
-    │   ├── bubble_sort_books(books, key1, key2)
-    │   ├── bucket_sort_books(library)
-    │   ├── print_sorted_bookshelves(library)
-    ├── Validation.py
-    │   ├── is_valid_date(date_str)
-    │   ├── is_valid_rating(rating)
-    │   ├── is_valid_age_group(age_group)
-    │   ├── is_valid_num_pages(num_pages)
-    │   ├── is_valid_year(year)
-    │   ├── is_valid_isbn(isbn)
-    │   ├── is_valid_isbn13(isbn13)
-    │   ├── is_valid_binding(binding)
-    └── data/
-        └── books.csv
 ```
 
 ## Requirements
@@ -116,9 +73,18 @@ Gives the user the option to view library via sorted bookshelves. Each bookshelf
 
 ### 6. Delete Library
 
-Allows the user to clear library. Permanent- cannot be reversed. 
+Allows the user to clear library. Permanent- cannot be reversed
 
-### 7. Exit
+### 7. Estimate Total Reading Time for Unread Books
+Calculates and prints the estimated time required to read all unread books in the library based on the user's reading speed
+
+### 8. Calculate the Maximum High-Value Books I Can Read Within a Certain Time
+Calculates and prints the list of books that can be read within a given time frame based on their value per hour (rating per hour)
+
+### 9. Cluster Books by Similarity
+Clusters books by similarity using MST and a greedy approach. Prompts the user for the number of clusters and prints the resulting clusters.
+
+### 10. Exit
 
 End program
 
@@ -143,6 +109,7 @@ Age Group (Children, Young Adult, Adult)
 
 ## Sorting
 
+### Merge Sort (Divide and Conquer), 
 Merge sort, a divide and conquer algorithm, is used to sort the books. Users can sort books by the following criteria:
 
 Author Last Name, First Name + Title
@@ -150,7 +117,21 @@ Year Published + Title
 Average Rating + Title
 The sorted list is saved back to the books.csv file
 
-Bucket Sort is also used to sort books within different bookshelves. These methods can be found in the sorting class
+### Bubble Sort
+Bubble sort is used to sort books within different bookshelves. This method sorts the list of dictionaries by two keys.
+
+
+### Bucket Sort
+Bucket sort is used to categorize books into different age groups (Children, Young Adult, Adult) and then sort each category by author and title.
+
+## Greedy Algorithm
+
+The greedy algorithm is used to calculate the maximum high-value books you can read within a certain time frame. This algorithm makes a locally optimal choice at each step by selecting the book with the highest value per hour that fits within the remaining available hours. This approach is efficient and provides a good approximation for maximizing the total value of books read within the given time frame.
+
+## MST and Clustering
+
+The MST (Minimum Spanning Tree) algorithm is used to cluster books by similarity. The algorithm calculates the similarity between books based on their genre and average rating, constructs an edge list, builds the MST using Kruskal's algorithm, and applies a greedy approach to form clusters by removing the highest-weight edges from the MST.
+
 
 ## How to Edit a Book
 You can edit the following attributes of a book:
