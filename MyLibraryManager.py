@@ -5,6 +5,8 @@ from helpers import Helpers
 from sorting import Sorting
 from validation import Validation
 from book import Book
+from mst_clustering import MSTClustering
+
 
 CSV_FIELDS = [
     "title", "author_first_last", "author_last_first", "isbn", "isbn13",
@@ -16,6 +18,7 @@ class MyLibraryManager:
     def __init__(self, csv_file='data/books.csv'):
         self.library = Helpers.read_csv_as_dict(csv_file)
         self.csv_file = csv_file
+        self.mst_clustering = MSTClustering() 
 
     def view_books(self):
         """
@@ -354,6 +357,105 @@ class MyLibraryManager:
         print(f"Estimated time to read all unread books: {total_hours:.2f} hours")
 
 
+    def augment_greedily(self, books, a_part_solution, hours_available):
+        '''
+        INTENT: Add a book to a_part_solution
+
+        PRECONDITIONS: As for those for schedule_from() below
+
+        RETURNS a_part_solution
+        '''
+        # Append first disjoint book (in the given book order)--if it exists
+        for book in range(a_part_solution[-1] + 1 if a_part_solution else 0, len(books)):
+            if books[book]['hours'] <= hours_available:
+                a_part_solution.append(book)
+                hours_available -= books[book]['hours']
+                break
+        return a_part_solution, hours_available  # unchanged if nothing to append
+
+    def schedule_from(self, books, hours_available):
+        '''
+        INTENT: Maximize number of books read based on value per hour
+
+        PRECONDITION 1 (Pairs): books is a non-null list of dictionaries
+        PRE2 (Proper Meets): 0 <= books[i]['hours'] for all i
+        PRE3 (Ordered): books are sorted by their value per hour in descending order
+
+        RETURNS book_schedule
+        POSTCONDITION: MeetsIORelationship(books, book_schedule)
+        '''
+        book_schedule = []  # solutions begin with an empty list
+
+        # Augment book_schedule as many times as possible; save old_ for comparison
+        old_books, book_schedule, hours_available = \
+            book_schedule.copy(), *self.augment_greedily(books, book_schedule, hours_available)
+        while book_schedule != old_books:  # augmentation occurred; do again
+            old_books, book_schedule, hours_available = \
+                book_schedule.copy(), *self.augment_greedily(books, book_schedule, hours_available)
+
+        return [books[i] for i in book_schedule]
+
+    def maximize_books_by_value(self):
+        """
+        PRECONDITION: pages_per_hour is a float, hours_available is a float
+        RETURNS: None
+        POST1: Prints the list of books that can be read within the given time frame based on value per hour
+
+        Args:
+            pages_per_hour (float): The reading speed in pages per hour
+            hours_available (float): The number of hours available to read
+        """
+        pages_per_hour = float(input("Enter your reading speed (pages per hour): "))
+        hours_available = float(input("Enter the number of hours you have available to read: "))
+        unread_books = [book for book in self.library if not book.get('read', 'False').lower() == 'true']
+
+        # Calculate reading time and value per hour for each book
+        for book in unread_books:
+            book['hours'] = int(book['num_pages']) / pages_per_hour
+            book['value_per_hour'] = float(book['avg_rating']) / book['hours']
+
+        # Sort books by value per hour in descending order
+        unread_books.sort(key=lambda x: x['value_per_hour'], reverse=True)
+
+        books_to_read = self.schedule_from(unread_books, hours_available)
+
+        # Prepare data for tabulate
+        table_data = [
+            [book['title'], book['author_first_last'], book['avg_rating'], book['num_pages'], f"{book['hours']:.2f}"]
+            for book in books_to_read
+        ]
+        headers = ["Title", "Author", "Rating", "Pages", "Hours"]
+
+        print("\n")
+        print("Suggested order of books to read in the available time (based on value per hour):")
+        print(tabulate(table_data, headers=headers, tablefmt="pretty"))
+     
+    def cluster_books_by_similarity(self):
+        """
+        Cluster books by similarity using MST and a greedy approach.
+
+        Prompts the user for the number of clusters and prints the resulting clusters.
+        """
+        num_clusters = int(input("Enter the number of clusters you want to form: "))
+        books = self.library  # Include all books in the library
+
+        # Ensure the number of clusters does not exceed the number of books
+        if num_clusters > len(books):
+            print(f"Number of clusters requested ({num_clusters}) exceeds the number of books ({len(books)}).")
+            num_clusters = len(books)
+            print(f"Setting the number of clusters to {num_clusters}.")
+
+        print(f"Number of clusters: {num_clusters}")
+        print(f"Number of books: {len(books)}")
+
+        clusters = self.mst_clustering.apply_greedy(books, num_clusters)
+
+        for idx, cluster in enumerate(clusters):
+            print(f"\nCluster {idx + 1}:")
+            for book_index in cluster:
+                book = books[book_index]
+                print(f" - {book['title']} by {book['author_first_last']} (Rating: {book['avg_rating']}, Genre: {book['genre']})")
+
 
     def menu(self):
         while True:
@@ -365,9 +467,11 @@ class MyLibraryManager:
             print("5. Print Sorted Bookshelves")
             print("6. Delete Library")
             print("7. Estimate Total Reading Time for Unread Books")
-            print("8. Exit")
+            print("8. Calculate the maximum high value books I can read within a certain time")
+            print("9. Cluster Books by Similarity")
+            print("10. Exit")
             print("-----------------------\n")
-            choice = input("Select an option (1/2/3/4/5/6/7): ").strip()
+            choice = input("Select an option (1/2/3/4/5/6/7/8/9/10): ").strip()
 
             if choice == "1":
                 self.view_books()
@@ -375,6 +479,7 @@ class MyLibraryManager:
             elif choice == "2":
                 self.add_book()
                 self.library = Helpers.read_csv_as_dict(self.csv_file)
+
             elif choice == "3":
                 self.edit_book()
                 self.library = Helpers.read_csv_as_dict(self.csv_file)
@@ -397,10 +502,16 @@ class MyLibraryManager:
                 self.library = Helpers.read_csv_as_dict(self.csv_file)
 
             elif choice == "7":
-                pages_per_hour = float(input("Enter your reading speed (pages per hour): "))
+                pages_per_hour = float(input("Enter your average reading speed (pages per hour): "))
                 self.estimate_reading_time(pages_per_hour)
 
             elif choice == "8":
+                self.maximize_books_by_value()
+
+            elif choice == "9":
+                self.cluster_books_by_similarity()
+
+            elif choice == "10":
                 print("Goodbye!")
                 break
 
